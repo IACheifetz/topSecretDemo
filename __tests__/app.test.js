@@ -26,7 +26,7 @@ describe('backend-express-template routes', () => {
   beforeEach(() => {
     return setup(pool);
   });
-  
+
   it('creates a new user', async () => {
     const res = await request(app).post('/api/v1/users').send(mockUser);
     const { firstName, lastName, email } = mockUser;
@@ -48,6 +48,32 @@ describe('backend-express-template routes', () => {
       exp: expect.any(Number),
       iat: expect.any(Number),
     });
+  });
+
+  it('should return a 401 when signed out and listing all users', async () => {
+    const res = await request(app).get('/api/v1/users');
+
+    expect(res.body).toEqual({
+      message: 'You must be signed in to continue',
+      status: 401,
+    });
+  });
+
+  it('should return a 403 when signed in but not admin and listing all users', async () => {
+    const [agent] = await registerAndLogin();
+    const res = await agent.get('/api/v1/users');
+
+    expect(res.body).toEqual({
+      message: 'You do not have access to view this page',
+      status: 403,
+    });
+  });
+
+  it('should return a list of users if signed in as admin', async () => {
+    const [agent, user] = await registerAndLogin({ email: 'admin' });
+    const res = await agent.get('/api/v1/users');
+
+    expect(res.body).toEqual([{ ...user }]);
   });
 
   afterAll(() => {
